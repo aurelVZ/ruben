@@ -1,0 +1,3721 @@
+$ Filename "ruben4.exe"
+Include "RTL32.inc"
+Include "awinh.inc"
+#LOOKAHEAD 
+
+'timers
+'indexbase 0
+Declare Function GetTickCount Lib "kernel32.dll" () As Long
+FLOAT startTime,EndTime,RTime
+ 
+'must be in global scope +++++++++++++++++++++++++
+INT fseed = 0x12345678 ' seed number
+INT kut = 0  ' global angle / kut |__
+INT turtlex=0,turtley=0
+string source ' src buffer
+string lines[40000]   'lines array
+'sys pt = strptr txt    'buffer base pointer
+'sys i.j,p              'indexes and pointer
+string CRLF=Chr(13)+Chr(10)
+string temp$=""
+INT TRUE = 1 
+INT FALSE = 0
+NumberFormat 4,1,0,0,0,0
+STRING Look,CR = chr(13),LF=chr(10)
+Look = " " ' Yes, that space is IMPORTANT!!!! Remove and DIE!!!
+STRING Stream,ts
+INT StreamPos       ' Read position in stream
+'++++++++++++++++++++++++++++++++++++++++++++++++
+% LR_LOADTRANSPARENT = &H20
+% LR_LOADMAP3DCOLORS = &H1000
+INT TransparentMap3D = LR_LOADTRANSPARENT Or LR_LOADMAP3DCOLORS
+INT win,win2,mpanel
+INT winstyle
+INT button0,button1,button2,button3,button4,button5
+INT edit1,edit2,edit3
+INT Lbox,static1,static2,static3,richedit1,hpbar
+INT statB0,statB1,statB2
+INT ed1ID,ed2ID,ed3ID,pbID
+INT b1ID,b2ID,b3ID,b4ID,b5ID,b6ID,b7ID
+INT LboxID
+LboxID=300
+INT st1ID,st2ID
+INT reID
+b0ID=99
+b1ID=100
+b2ID=101
+b3ID=102
+b4ID=103
+b5ID=104
+'-----------------
+ed1ID=200
+ed2ID=201
+ed3ID=202
+'----------------
+st1ID=350
+st2ID=351
+st3ID=352
+INT statB0id=360,statB1id=361,statB2id=362
+'----------------
+reID=400
+'----------------
+pbID = 70
+'loadbmp
+'##########################################
+INT bmpB0,bmpS1
+bmpB0 = LoadImage(0,"data/xpNew.bmp",0,24,24,16)
+bmpS1 = LoadImage(0,"data/rubenX.bmp",0,82,82,16)
+'##########################################
+STRING src[15000]
+'*******************************************
+'************* GLOBALS *********************
+STRING arg0[4096]
+STRING arg1[4096]
+STRING arg2[4096]
+STRING arg3[4096]
+STRING arg4[4096]
+STRING arg5[4096]
+STRING arg6[4096]
+STRING arg7[4096]
+STRING arg8[4096]
+STRING arg9[4096]
+STRING arg10[4096]
+STRING arg11[4096]
+STRING arg12[4096]
+STRING arg13[4096]
+STRING arg14[4096]
+STRING arg15[4096]
+STRING arg16[4096]
+STRING arg17[4096]
+STRING arg18[4096]
+STRING arg19[4096]
+STRING arg20[4096]
+'command token
+sys tok[4096]
+'******************************************
+'-----------COMMAND TOKENS---------
+%R_UNKNOWN=0
+%R_WTEXT=1
+%R_MSG=2
+%R_IF=3
+%R_ENDIF=4
+%R_LOOPTO=5
+%R_SHIFT=6
+%R_SET=7
+%R_WFORM=8
+%R_PIX=9
+%R_LINE=10
+%R_TXCOLOR=11
+%R_DEFINT=12
+%R_NARRAY=13
+%R_JUMP=14
+%R_LABEL=15
+%R_CIRCLE =16
+%R_WINCOLOR = 17
+%R_RECT = 18
+
+%R_CONTROL = 20
+
+%R_WAIT    = 50
+%R_CALL    = 51
+%R_FUNC    = 52
+%R_ENDFUNC = 53
+%R_MBOXGTW = 54
+%R_OFF = 55
+%R_MOUSEMOVE = 56
+%R_MOUSEX    = 57
+%R_MOUSEY    = 58
+%R_LEFTMBDOWN = 59
+%R_ONPAINT    = 60
+%R_CLIP       = 61
+
+INT perr = 0
+'******************************************
+'intList ->->->->->->->->
+INT varLastPos=0
+INT varID=0
+STRING varName[100]
+FLOAT   varValue[100] 
+'var type list
+' 1 - INT  
+' 2 - FLOAT
+' 3 - STRING 
+INT varType[100]
+'array index /id/
+'4 ARRAY-INT [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+INT arrIndex=0
+STRING arrStack[32]   'array stack hold array name 
+STRING arrType[32]    'array type 1->INT , 2->STRING
+STRING arrSize[32]    'array size
+STRING arrID[32]      'array ID -> hold array index(identifier)
+'array store
+STRING arr01[4096],arr02[4096],arr03[4096],arr04[4096],arr05[4096],arr06[4096],arr07[4096],arr08[4096]
+STRING arr09[4096],arr10[4096],arr11[4096],arr12[4096],arr13[4096],arr14[4096],arr15[4096],arr16[4096]
+'5 ARRAY-FLOAT
+'6 ARRAY-STRING
+'*******************************************
+String arg[20]
+sys dPos[20]
+'---array of global variables -------------
+string gArrInt[100]
+'*******************************************
+'program Counter PC--------------------------
+INT PC=0,LineNum=0,executed=0,Start=0,EndCode=0,perr=0,key=0
+INT EventOn=0,waitpos=0
+INT MMoveOn=0,MMovePos=0
+INT GetMouseX=0,GetMouseY=0
+INT LeftBDownON=0,LeftBDownPos=0
+INT PaintOn = 0,PaintPos=0
+'----------------------------------------------------
+'FOR stack--------------------------------
+INT forStart,fc[100],forEnd[100]
+INT fPush,fStep[100],forPos[100]
+STRING fStack[16]
+'-- LABEL STACK -------------------
+INT LabelCounter
+INT labelPos[1000]
+STRING labelName[1000]
+'-- FUNC STACK --------------------
+INT gPush,retPos
+INT funcPos[1000]
+INT gStack[1000]
+INT subpos[1000]
+STRING FuncName
+
+'-------------------------------------------
+INT hControl
+'-------------------------------------------
+winstyle = WS_HIDDEN 
+'winstyle = WS_SYSMENU
+'GLOBALS for drawing to DC --------------------------------------------  
+INT hdc, hdcMem, hbmMem,   oldBmp, oldBrush, oldPen, oldFont, fColor,bColor
+INT textX,textY,hBrush
+INT ww,hh
+String tBuffer
+'create main window ****************************************************
+win = SetWindow("RUBEN",40,40,750,572,0, winstyle)
+'***********************************************************************
+
+INT mainClose=0
+'create buttons ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+'button0 = SetButton(win,124,6,40,32,"NEW",0x50000080|LR_LOADTRANSPARENT,0x200,b0ID)
+'SendMessage button0 , BM_SETIMAGE, 0, bmpB0
+statB0 = SetStatic(win,100,6,24,24,"",0x5000030E,0,statB0id)
+SendMessage statB0 ,370, 0, bmpB0
+button1 = SetButton(win,100,6,90,24,"OpenFile",0x50000000,0x200,b1ID)
+'set bitmap on button 1
+'SendMessage button1 , BM_SETIMAGE, 0, bmpB1
+button2 = SetButton(win,594,60,80,24,"MSG-PANEL",0x50000000,0x200,b2ID)
+'button3 = SetButton(win,380,14,100,24,"Load X",0x50000000,0x200,b3ID)
+'button4 = SetButton(win,490,14,70,24,"GetLCount",0x50000000,0x200,b4ID)
+button5 = SetButton(win,196,6,84,24,"RUN",0x50000000,0x200,b5ID)
+
+':::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+'create edit control
+edit1 = SetEditBox(win,100,60,488,23,"edit 1",0x50004000,0x200,ed1ID)
+
+'create listboxes ::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+Lbox = SetListBox(win,594,88,140,440,"LB 1",0x50B00140,0x200,LboxID)
+
+'create static control
+static1 = SetStatic(win,656,6,60,16,"RubenDev:",0,0x200,st1ID)
+'upper edit
+static2 = SetEditBox(win,100,40,488,18,"",0x50004000,0x200,st1ID)
+'crete static control with bitmap
+static3 = SetStatic(win,8,6,82,82,"",0x5000030E,0x200,st3ID)
+SendMessage static3 ,370, 0, bmpS1
+
+'create Rich Edit control
+INT reStyle = WS_CHILD|WS_VISIBLE|ES_MULTILINE|ES_WANTRETURN|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_AUTOHSCROLL|ES_SUNKEN
+String tbuffer=""
+       ' tbuffer = "defINT n,s,e" + Chr(13)
+'tbuffer=tbuffer + "Set n = 1,s=2,e=3" + Chr(13)
+'tbuffer=tbuffer + "wFORM  100, 0, 400, 300, #MMS,0," + Chr(34) +"New Caption!" +Chr(34) +Chr(13)
+'tbuffer=tbuffer + "doFOR number, start, end" + Chr(13)
+'tbuffer=tbuffer + "wTEXT xPos , yPos ,"+ Chr(34) +"New Text" + Chr(34)
+'INT reStyle = 0x508010C4 /::src code line::
+richedit1 = SetRichEdit(win,8,88,580,440,tbuffer,reStyle ,0x200,reID)
+'setFont
+ControlFont(richedit1,16,400,0,"Courier New")
+INT LCount = 0
+INT parseCount=0,runCount=0
+'GetCommandline / recieve command line from editor /
+IF parseCount=0 AND runCount=0
+   string fName=""
+   fName = GetCommandLine()
+   'fName = chr(34) + fname + chr(34)
+   'print fname
+   if fname<>""
+   LoadfromFile()
+   end if
+End If
+sys eMSG
+
+
+'-----------------------------------------------------------
+'GoSub AddListboxItems
+'-----------------------------------------------------------
+' msg loop -->>>
+Wait()
+'------------<<<
+'============================================================================================================
+Function WndProc (byval hwnd as long,byval wMsg as long, byval wParam as long,byval lparam as long) as long callback
+
+Select hwnd
+'>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Case win
+'>>>>>>>>>>>>>>>>>>>><<<
+Select wMsg
+'----------------------------
+	'Case WM_CLOSE
+     'print "wmClose-detected"
+	'If win=1     
+	'CloseWindow(win)
+	'EndProgram()
+	'End If
+CASE WM_DESTROY
+PostQuitMessage(0)
+
+'-------------------------------------------------------------
+	Case WM_COMMAND	
+	controlID = LoWord(wParam) 'get control ID
+	notifyCode = HiWord(wParam) 'get notification message
+
+	Select controlID
+	   Case b1ID
+		If notifycode=0  
+			doOpen()
+		End If
+
+	   Case b2ID ' open message panel
+	     If notifycode=0 
+		  msgPanel()		  
+		End If
+
+	  Case b3ID
+		If notifycode=0
+		'LoadFromFile()
+		End If
+
+	  Case b4ID
+		If notifycode=0
+		GetLineCount()
+		End If
+
+	  Case b5ID
+         'RUN
+		If notifycode=0
+		ParseCode()
+         'print "ParseError:" + Str(perr)
+		If perr=0 then RunCode()
+         'print "Run-Over!"
+		End If
+
+	End Select
+End Select 'msg
+'------------------------------------------
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Case win2
+
+  
+Select wMsg
+
+Case WM_PAINT
+If win2 <> 0
+	
+      BitBlt(hDC, 0, 0, ww, hh, hdcMem, 0, 0, SRCCOPY)
+	
+End If
+
+
+
+Case WM_CLOSE
+	If win2 <> 0
+    'print "OutWindow Closed!"
+     CleanUp()
+	CloseWindow(win2)
+    SendMessage win,WM_DESTROY,0,0:parseCount=0:runCount=0
+    ExitProcess 0
+     'win2=0
+	End If
+'::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+'processing events ::::::::::::::::::::::::::::::::::::::
+CASE WM_COMMAND
+controlID = LoWord(wParam) 'get control ID
+notifyCode = HiWord(wParam) 'get notification message
+'
+'for button onclick
+'IF notifyCode=0
+'search control ID
+'For controlID = 100 TO 500
+'Next 
+'END IF
+'---------------------------------------------------
+CASE WM_MOUSEMOVE
+GetMouseX = LoWord(lParam)
+GetMouseY = HiWord(lParam)
+IF MMovePos > WaitPos
+'GetMouseX = LoWord(lParam)
+'GetMouseY = HiWord(lParam)
+MMoveOn = 1
+'
+  If MMoveOn = 1
+     If eventOn = 1
+		Runcode()
+		MMoveOn=0
+	End if
+  end if
+END IF
+'-------------------------------------------------
+CASE WM_LBUTTONDOWN
+
+IF LeftBDownPos > WaitPos
+LeftBDownON = 1
+	If LeftBDownON = 1
+		Runcode()
+		LeftBDownON = 0
+     End If
+END IF
+
+  End Select 'msg
+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Case mpanel
+Select wMsg
+	Case WM_CLOSE
+		If mpanel <> 0
+		'CleanUp()
+		CloseWindow(mpanel)
+		End If
+End Select
+'------------------------------------------
+End Select
+
+'/////////////////////////////////////////////
+Return DefWindowProc hwnd,wMsg,wParam,lParam
+'/////////////////////////////////////////////
+End FUNCTION
+'============================================================
+
+SUB msgPanel
+winstyle = WS_SYSMENU
+mpanel = SetWindow("RUBEN - Message Panel",300,200,380,320,0,winstyle)
+
+hpbar = SetProgressbar(mpanel,40,60,300,16,1,300,2,0,0x200,pbID)
+End SUB
+
+'########################################################
+SUB AddListboxItems
+bstring i$ : i$=""
+SendMessage LBox,LB_RESETCONTENT,0,""
+For n = 0 To 10
+i$ = Str(n) + "...." + Str(dpos[n]) 
+SendMessage Lbox,LB_ADDSTRING,0,i$
+Next n
+End SUB
+'#########################################################
+
+
+'#########################################################
+SUB LoadFromFile
+STRING args,src
+INT qPos,sf
+bstring info
+
+' remove the executable information
+  ' get quote position
+   qPos = Instr(1,fName, Chr(34))
+   qPos = Instr(qPos+1,fName, Chr(34))
+'print str(qpos)
+   args = Mid(fName,qPos+1,254)
+src = Trim(args) 
+
+If len(src) = 0 
+args="No Source"
+'info=args : IF LEN(info)=0 then info = "No Source"
+end if
+'print args...if is empty then compiler trow F ???
+SendMessage edit1,WM_SETTEXT,0,strptr args
+
+source = GetFile src
+
+If Len(source)=0 
+args="No Source"
+MsgBox (args, "Source Not Found!")
+SendMessage win,WM_CLOSE,0,0 : parseCount=0:runCount=0
+Return
+End If
+
+'SendMessage richedit1,WM_SETTEXT,0,strptr source
+
+ParseCode()
+'print "Parsed...."
+parseCount=1  'prevent double PARSE
+If perr=0
+'print "Run..." 
+RunCode()
+runCount=1 ' prevent double RUN
+End if
+'print "EXEC::"+str(executed)
+RETURN
+End SUB 
+
+'************************************************************
+
+Sub doOpen
+bstring fR
+dir=""
+bstring sep=chr 0
+filter="All Files"+sep+"*.*"+sep+"Text files"+sep+"*.txt"
+'filter="text"+sep+"*.txt"+sep+
+       '"basic"+sep+"*.bas;*.o2bas"+sep+
+       '"include"+sep+"*.inc"+sep+
+       '"header"+sep+"*.h"+sep+
+       'sep
+
+title="Test File Opening Dialog"
+hwnd=0
+fR = FileDialog(dir,filter,title,0,0,"txt")
+
+SendMessage edit1,WM_SETTEXT,0,fR
+bstring tx =  getfile fR
+SendMessage richedit1,WM_SETTEXT,0,tx
+
+End Sub
+'*************************************************************
+
+SUB GetLineCount
+
+LCount = SendMessage richedit1,EM_GETLINECOUNT,0,0
+EndCode=LCount
+bstring count$ = ""
+count$ = Str(LCount)
+SendMessage edit1,WM_SETTEXT,0,count$
+count$=""
+
+RETURN
+End SUB
+
+
+SUB PARSECODE
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+'MsgBox "START PARSER...","PARSE CODE..."
+SendMessage LBox,LB_RESETCONTENT,0,""
+ClearGlobalArray()
+PC=0
+INT Lpos 
+INT LLen
+INT EPos=0
+STRING c$=""
+string LText=""
+string pText=""
+'reset var position %%%%
+varLastPos=0
+'%%%%%%%%%%%%%%%%%%%%%%%
+'GetLineCount()
+FillArray()
+
+'+++ main loop +++++++++++++++++++++++++++++++
+For Lpos = 1 TO LCount
+'set pc
+'print "LPOS:" + Str(LPos)
+PC=Lpos
+'print "PC:" + Str(pc)
+'clear locals
+c$="":LText="":Epos=0
+LText = lines[LPos]
+'skip empty line-----------------
+'IF LText = "" THEN Goto toNext
+'Left trim whitespace -----------
+LText = LTrim(Ltext)
+UpdateWindow static2:UpdateWindow edit1
+SendMessage static2,WM_SETTEXT,0,strptr(Ltext)
+'SendMessage edit1,WM_SETTEXT,0,strptr(pc$)
+'get position of first empty space ----------
+Epos = INSTR (LText," ")
+IF EPos <> 0
+   'get left from empty space
+   c$ = Left(LText,Epos-1)
+ELSE
+  'get substring argument
+  c$= Mid(Ltext,1,Len(Ltext))
+END IF
+c$ = Trim(c$)
+c$=Ucase(c$)
+'..................................
+'print "C$:"+c$
+
+'check command :::
+
+If c$="DEFN"
+	parse_DEFINT()
+End If
+
+If c$="IF"
+    parse_IF()
+End If
+
+If c$="ENDIF"
+    parse_ENDIF()
+End If
+
+If c$="SET"
+    parse_SET()
+End If
+
+If c$="NARRAY"
+    parse_ARRAYN()
+End If
+
+If c$="WFORM" 
+	parse_WINDOW()
+End If
+
+If c$="FOR"
+	parse_FOR()
+End If
+
+If c$="NEXT"
+    parse_NEXT()
+End If
+
+If c$ = "TXCOLOR"
+parse_TxColor()
+End If
+
+If c$="WTEXT"
+	parse_wtext()
+End If
+
+If c$="MBOXGETW"
+	parse_MBoxGetWord()
+End If
+
+If c$="LINE"
+    parse_LineXY()
+End If
+
+If c$="CIRCLE"
+    parse_Circle()
+End If
+
+If c$="RECT"
+    parse_Rect()
+End If
+
+If c$="PIX"
+    parse_PsetXY()
+End If
+
+If c$="JUMP"
+    parse_JUMP()
+End If
+
+If c$="LABEL"
+    parse_LABEL()
+End If
+'.......................'
+'... EVENTS-MESSAGES ...'
+'.......................'
+If c$="WAIT"
+    parse_WAIT()
+End If
+
+If c$="@MOUSEMOVE"
+   parse_MOUSEMOVE()
+End if
+
+If c$="@ONPAINT"
+    parse_ONPAINT()
+End If
+
+If c$="@LEFTMBDOWN"
+   parse_LeftButtonDown()
+End if
+
+If c$="@MOUSEX"
+   parse_MOUSEX()
+End if
+
+If c$="@MOUSEY"
+   parse_MOUSEY()
+End if
+
+If c$="@OFF"
+   parse_OFF()
+End If
+'......................
+If c$="REDRAW"
+    parse_REDRAW()
+End If
+
+If c$="WCOLOR"
+    parse_WINCOLOR()
+End If
+
+If c$="WCON"
+    parse_WINCONTROL()
+End If
+
+Next Lpos
+string showerror
+showerror=Str(perr)
+'MsgBox ("...END PARSING !","")
+
+Return
+End SUB
+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+' END PARSER
+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+'------ FILL GLOBAL STRING ARRAY ------------------------------
+SUB FillArray
+'initial
+'=======
+b=1  'start of line
+i=0  'lines array index
+j=1  'char index
+'
+'splitter loop
+'=============
+'
+DO
+  select asc(source,j)
+  case 0
+    if j-b>0 then
+      i++
+      lines[i]=mid(source,b,j-b)
+    end if
+    exit do
+  case 10 'LF TERMINATED LINES
+    i++
+    lines[i]=mid(source,b,j-b)
+    b=j+1
+  case 13 'CR AND CRLF TERMINATED LINES
+    i++
+    lines[i]=mid(source,b,j-b)
+    if asc(source,j+1)=10 then j++ 'SKIP LF
+    b=j+1
+  end select
+  j++    
+END DO
+'array filed
+LCount=i
+'print "Line Count:" +str(Lcount)
+'MsgBox "Source Array filled...","OK!"
+End SUB
+
+'---CLEAR GLOBAL STRING ARRAY  ----------------------------------
+SUB ClearGlobalArray
+INT n
+For n = 0 TO 1000
+arg0[n]=""
+arg1[n]=""
+arg2[n]=""
+arg3[n]=""
+arg4[n]=""
+arg5[n]=""
+arg6[n]=""
+arg7[n]=""
+arg8[n]=""
+arg9[n]=""
+arg10[n]=""
+arg11[n]=""
+arg12[n]=""
+arg13[n]=""
+arg14[n]=""
+arg15[n]=""
+arg16[n]=""
+arg17[n]=""
+arg18[n]=""
+arg19[n]=""
+arg20[n]=""
+Next n
+'print "GLOBAL LIST - CLEARED!"
+
+RETURN
+End SUB
+'________________________________________________________________
+SUB parse_WINDOW
+'print "WINDOW"
+'***********************************************************
+Int cc,nArg,n : nArg=7
+string buffer=""
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,7,Len(temp$)-2)
+temp$=Ltrim(temp$)
+'cc = Tally temp$,","
+'tally2- by Charles
+cc = Tally(temp$,",")
+ ParseArgs()
+'if wrong numOfArgs
+If nArg <>(cc+1)
+MsgBox "Wrong Number of arguments!","ERROR-Parse Window"
+perr=1
+Return
+End If
+
+'store key
+arg0[PC] = "WFORM" : tok[PC] = R_WFORM
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+Return
+End Sub
+'_____________________________________________________________
+SUB parse_WINCONTROL
+'syn WCON $BUTTON,x,y,w,h,style,id
+'***********************************************************
+Int cc,nArg,n : nArg=7
+string buffer=""
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+ ParseArgs()
+'if wrong numOfArgs
+If nArg <>(cc+1)
+MsgBox "Wrong Number of arguments!","ERROR-Parse WinControl"
+perr=1
+Return
+End If
+
+'store key
+arg0[PC] = "WCON" : tok[PC] = R_CONTROL
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+End Sub
+
+'parse doFOR ---------------------------------------------
+SUB parse_FOR
+'LoopTo
+INT cc,nArg	
+temp$ = ""
+temp$ = lines[PC]
+'print "(for)TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,4,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+ParseArgs()
+
+nArg=cc+1
+'if wrong numOfArgs
+If nArg <>(cc+1)
+MsgBox "Wrong Number of arguments!","ERROR-Parse LoopTo"
+perr=1
+Return
+End If
+
+'store key
+arg0[PC] = "FOR" : tok[PC] = R_LOOPTO
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+
+End SUB
+'--------------------------------------------------------
+'parse Next step
+SUB parse_NEXT
+'shift
+INT cc,nArg	
+temp$ = ""
+temp$ = lines[PC]
+'print "(for)TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,6,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+ParseArgs()
+
+nArg=cc+1
+'if wrong numOfArgs
+If nArg <>(cc+1)
+MsgBox "Wrong Number of arguments!","ERROR-Parse Window"
+perr=1
+Return
+End If
+
+'store key
+arg0[PC] = "SHIFT" : tok[PC] = R_SHIFT
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+
+End SUB
+
+'parse IF ----------------------------------------------
+SUB parse_IF
+'print "IF command found!"
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,3,Len(temp$)-2)
+temp$= Trim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+	'print "Number of arguments :" + Str(nArg)
+If nArg > 3
+	MsgBox "Number of arguments OUT of range!","ERROR-Parse IF"
+    perr=1
+Return
+End If
+
+ParseArgs()
+
+arg0[PC] = "IF" : tok[PC] = R_IF
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+'print arg0[PC] + arg1[PC] + arg2[PC] + arg3[PC]
+
+END SUB
+
+'parse ENDIF ----------------------------------------------
+SUB parse_ENDIF
+
+arg0[PC] = "ENDIF" : tok[PC] = R_ENDIF
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+
+
+'parse DEFINT-------------------------------------------
+SUB parse_DefINT
+'print "DEFN - DEFineNumber "
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+	'print "Number of arguments :" + Str(nArg)
+If nArg > 20
+	MsgBox "Number of arguments OUT of range!","ERROR-Parse INT"
+    perr=1
+Return
+End If
+
+ParseArgs()
+
+'set variable name & value position of variable in array
+INT pos=0
+pos = varLastPos + 1
+For n = 1 TO nArg
+	varName[pos] = arg[n]
+     varValue[pos] = 0
+     varType[pos] = 1 
+     'print "VAR:" + varName[pos] + " = " + Str(pos)
+pos = pos + 1
+Next n
+'set last variable position in array
+varLastPos = pos
+'store key
+arg0[PC] = "DEFN" : tok[PC] = R_DEFINT
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+End SUB
+
+'[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+SUB parse_ARRAYN
+'print "NARRAY command found!"
+STRING arrName ,ts,asize ',arrType,arrSize,arrID,ts
+INT cc,n,nArg,bo,bc
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,7,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+	'print "Number of arguments :" + Str(nArg)
+If nArg > 20
+	MsgBox "Number of arguments OUT of range!","ERROR-Parse INT"
+    perr=1
+Return
+End If
+
+ParseArgs()
+
+'set array name ,value position of variable in array
+IF arrIndex < 33
+'arrIndex=arrIndex+1
+n=1
+For n = 1 TO nArg
+ts=arg[n]
+bo=INSTR(ts,"[")
+arrName=mid(ts,1,bo-1) 'get name $
+bc=instr(1,ts,"]")
+aSize= mid(ts,bo+1,(bc-1)-2)  'get size $
+'--------------------
+arrIndex=arrIndex+1
+'--------------------
+arrType[arrIndex] = "1"          'arr type
+arrSize[arrIndex] = asize        'arr size
+arrID[arrIndex] = str(arrIndex)  'arr id
+arrStack[arrIndex]= arrName      'arr name(stack for search...)
+'print "ARRAY:" + arrStack[arrIndex]  'name
+'print "TYPE:"  + arrType[arrIndex]
+'print "SIZE:"  + arrSize[arrIndex]
+'print "ID:"    + arrID[arrIndex]
+	
+Next n
+
+END IF
+'set last variable position in array
+'varLastPos = pos
+'store key
+arg0[PC] = "NARRAY" : tok[PC] = R_NARRAY
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+End SUB
+
+'-------------------------------------------------------
+SUB parse_SET : ' set a = (expr),b=expr,c=expr
+INT ec,n,nArg,eqPos,cc
+String ex$="",v$=""
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,4,Len(temp$)-2)
+temp$=Ltrim(temp$)
+'print "TEMP:" + temp$
+
+'check if comma is outside of quote/more expressions
+cc=Tally(temp$,",")
+'print "CommaCount:" + Str(cc)
+
+If cc=0
+'arg0[PC] = "SET"
+arg1[PC] = Trim(temp$)
+temp$=""
+End If
+
+If cc>0
+
+ParseArgs()
+End If
+
+arg0[PC] = "SET" : tok[PC] = R_SET
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+
+
+
+'-------------------------------------------------------
+SUB parse_TxColor
+'parse Text Color-> TxColor fr,fg,fb,br,bg,bb
+INT cc,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,8,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 6
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse WTEXT"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "TXCOLOR" : tok[PC] = R_TXCOLOR
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+'-------------------------------------------------------
+'parse wText
+SUB parse_wText
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,6,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 3
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse WTEXT"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "WTEXT" : tok[PC] = R_WTEXT
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+End SUB
+'-------------------------------------------------------
+'parse MBoxGetWord
+SUB parse_MBoxGetWord
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP:"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,9,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 2
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse MBOXGETW"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "MBOXGETW" : tok[PC] = R_MBOXGTW
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+print "parsed-> MBoxGetWord OK!"
+perr=0
+End SUB
+
+
+'-------------------------------------------------------
+'parse lineXY
+' Line x1,y1,x2,y2
+SUB parse_LineXY
+
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 4
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse LINEXY"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "LINE" : tok[PC] = R_LINE
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+
+'-------------------------------------------------------
+'parse CIRCLE
+' Circle x1,y1,r
+SUB parse_Circle
+
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,7,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 4
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse CIRCLE"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "CIRCLE" : tok[PC] = R_CIRCLE
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+'------------------------------------------------------------------------
+' Rect x1,y1,w1,h1
+SUB parse_Rect
+
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 4
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse RECT"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "RECT" : tok[PC] = R_RECT
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+'-------------------------------------------------------
+SUB parse_PsetXY
+' PIX x,y
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,4,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 2
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR-Parse PIXEL"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "PIX" : tok[PC] = R_PIX
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+End SUB
+
+'-------------------------------------------------------
+SUB parse_JUMP
+' JUMP label
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 2
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse JUMP"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "JUMP" : tok[PC] = R_JUMP
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'-------------------------------------------------------
+SUB parse_LABEL
+' JUMP label
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,6,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 1
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse JUMP"
+  perr=1
+Return
+End If
+
+ParseArgs()
+
+INT pos=0
+pos = LabelCounter + 1
+labelName[pos] = arg1[PC]
+labelPos[pos] = PC
+LabelCounter = pos
+'store key
+arg0[PC] = "LABEL" : tok[PC] = R_LABEL
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'-------------------------------------------------------
+SUB parse_WAIT
+' WAIT 0
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+'cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse WAIT"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "WAIT" : tok[PC] = R_WAIT
+Waitpos = PC
+'print "PARSE::WAIT -> Ok!"
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+
+'------------------------------------------------------------
+SUB parse_MOUSEMOVE
+' @mousemove
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,11,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+'cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse MOUSEMOVE"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "@MOUSEMOVE" : tok[PC] = R_MOUSEMOVE
+MMoveOn = 1
+MMovePos = PC
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'-------------------------------------------------------
+SUB parse_OFF
+' @OFF
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,5,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+'cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse OFF"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "@OFF" : tok[PC] = R_OFF
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'---------------------------------------------------------------------
+SUB parse_ONPAINT
+' @ONPAINT
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,9,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+'cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse ONPaint"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "@ONPAINT" : tok[PC] = R_ONPAINT
+PaintPos = PC : PaintOn=1
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'---------------------------------------------------------------------
+SUB parse_REDRAW
+' REDRAW
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,7,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+'cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse REDRAW"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'store key
+arg0[PC] = "REDRAW" : tok[PC] = R_CLIP
+'PaintPos = PC : PaintOn=1
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'---------------------------------------------------------------------
+SUB parse_LeftButtonDown
+' @LEFTMBDOWN
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,12,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 0
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse @LEFTMBDOWN"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'print "ARG-1 : " + arg1[PC]   'argument after @MOUSEMOVE ignored
+
+
+'store key
+arg0[PC] = "@LEFTMBDOWN" : tok[PC] = R_LEFTMBDOWN
+LeftBDownPos = PC
+'LeftBDownON = 1
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'--------------------------------------------------------------------
+SUB parse_MouseX
+' @MOUSEX
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,8,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 1
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse @MOUSEX"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'print "ARG-1 : " + arg1[PC]   'argument after @MOUSEX is variable
+
+
+'store key
+arg0[PC] = "@MOUSEX" : tok[PC] = R_MOUSEX
+'MouseMovePos = PC
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'---------------------------------------------------------------------
+SUB parse_MouseY
+' @MOUSEY
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,8,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+0
+
+If nArg > 1
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse @MOUSEY"
+  perr=1
+Return
+End If
+
+ParseArgs()
+'print "ARG-1 : " + arg1[PC]   'argument after @MOUSEX is variable
+
+
+'store key
+arg0[PC] = "@MOUSEY" : tok[PC] = R_MOUSEY
+'MouseMovePos = PC
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'-------------------------------------------------------
+SUB parse_WINCOLOR
+' color window WCOLOR
+INT cc,n,nArg
+temp$=""
+temp$ = lines[PC]
+'print "TEMP(parse_LINE):"+temp$
+temp$=Ltrim(temp$)
+temp$=Mid(temp$,7,Len(temp$)-2)
+temp$=Ltrim(temp$)
+
+cc = Tally(temp$,",")
+nArg=cc+1
+
+If nArg > 3
+string err="": err="Number of arguments Out of range! LINE:" + Str(PC)
+  MsgBox err, "ERROR--> Parse WCOLOR"
+  perr=1
+Return
+End If
+
+ParseArgs()
+
+'store key
+arg0[PC] = "WCOLOR" : tok[PC] = R_WINCOLOR
+SendMessage Lbox,LB_ADDSTRING,0,arg0[PC]
+perr=0
+
+END SUB
+'-------------------------------------------------------
+FUNCTION Tally(STRING Main$,STRING Match$) As INT
+'print "TALLY:" + main$
+INT n
+For n=1 TO 20:dPos[n]=0:Next n
+
+    Dim i,j,q,mlen,matchlen As INT
+	Dim t$ As STRING
+    mlen = Len(Main$)
+    matchlen = Len(Match$)
+    i = 1
+    j = 0
+    q = 0
+    If (mlen = 0) Or (matchlen = 0) 
+        Return j
+    End If
+    
+    do
+		
+		t$ = Mid(Main$,i,matchlen)
+		If t$ = Chr(34) THEN q = q + 1
+		If q=2 THEN q = 0
+        If t$ = Match$ And q=0 
+           j++
+			'mem del$ position
+			dpos[j]=i
+		  'j = j + 1
+         
+        End If 
+		
+           i++
+        If i > mlen then
+           exit do
+        End If
+    End do
+'tbreak:
+    Return j
+End FUNCTION
+
+'------------------------------------------
+'------------------------------------------
+SUB ParseArgs
+INT n:'clear arguments array
+For n=0 TO 20:arg[n]="":Next n
+
+string t$=""
+t$=Trim(temp$)
+
+INT k,i,j
+i = 0
+j = 1
+k = 1
+
+For i = 1 TO Len(t$)	
+	If i = dPos[k] 
+	
+		arg[k] = Mid(t$,j,(i-j))
+		   arg[k] = Trim(arg[k])		    
+		k=k+1
+		j = i + 1
+    
+         			
+	End If	
+Next 
+'+ extract last argument
+arg[k] = Mid(t$,j,Len(t$))
+arg[k] = Trim(arg[k])
+
+'fill source table >>>>>
+arg1[pc]=arg[1]
+arg2[pc]=arg[2]
+arg3[pc]=arg[3]
+arg4[pc]=arg[4]
+arg5[pc]=arg[5]
+arg6[pc]=arg[6]
+arg7[pc]=arg[7]
+arg8[pc]=arg[8]
+arg9[pc]=arg[9]
+arg10[pc]=arg[10]
+arg11[pc]=arg[11]
+arg12[pc]=arg[12]
+arg13[pc]=arg[13]
+arg14[pc]=arg[14]
+arg15[pc]=arg[15]
+arg16[pc]=arg[16]
+arg17[pc]=arg[17]
+arg18[pc]=arg[18]
+arg19[pc]=arg[19]
+arg20[pc]=arg[20]
+'<<<<<<<<<<<<<<<<<<<<<<
+temp$=""
+Return
+End sub
+
+'********************* 
+'** RUN CODE  ******************************************************
+'*********************  
+SUB RUNCODE
+
+'print "ENDCODE;;"+str(EndCode)
+IF EventOn=1
+     '@mousemove....................
+	If MMoveOn=1
+	start = MMovePos + 1
+	End if
+     '@leftmbdown...................
+	If LeftBDownON = 1
+     Start = LeftBDownPos + 1
+     End If
+	'@onpaint......................
+     If PaintOn=1
+	 Start = PaintPos + 1
+	 End if
+END IF
+If EventOn = 0 then start = 1
+
+
+' *** MAIN LOOP *****
+'print "START:" + str(start)
+For LineNum = Start TO Lcount
+
+'get keyword...token(int)
+key = tok[LineNum]
+	'print "KEY:" + key$
+PC=LineNum
+'
+
+'select command
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+IF key = R_WFORM
+exec_Window()
+END IF
+
+IF key = R_IF 
+LineNum = exec_IF()
+END IF
+
+IF key = R_ENDIF 
+'do nothing IF key = TRUE
+END IF
+
+IF key = R_SET
+exec_Set()
+END IF
+
+IF key = R_TXCOLOR
+exec_TxColor()
+END IF
+
+IF key = R_WTEXT
+exec_WText()
+END IF
+
+IF key = R_MBOXGTW
+exec_MBoxGetWord()
+END IF
+
+IF key = R_LINE
+exec_LineXY()
+END IF
+
+IF key = R_CIRCLE
+exec_Circle()
+END IF
+
+IF key = R_RECT
+exec_Rect()
+END IF
+
+IF key = R_PIX
+exec_PsetXY()
+END IF
+
+IF key = R_LOOPTO
+exec_FOR()
+END IF
+
+IF key = R_SHIFT
+exec_NEXT()
+END IF
+
+IF key = R_JUMP
+LineNum=exec_JUMP()
+END IF
+
+IF key = R_WINCOLOR
+exec_WINCOLOR()
+END IF
+'redraw
+IF key = R_CLIP
+InitDrawing(win2)
+BitBlt(hDC, 0, 0, ww, hh, hdcMem, 0, 0, SRCCOPY)
+END IF
+
+'controls
+IF key = R_CONTROL
+exec_WINCONTROL()
+END IF
+
+'wait for messages
+IF key = R_WAIT
+EventOn=1
+'LineNum=EndCode
+'print "LINENUM:" + str(lineNum)
+goto out
+END IF
+
+IF key = R_MOUSEX
+  If EventOn=1
+   exec_MouseX()
+  end if
+END IF
+
+IF key = R_MOUSEY
+  If EventOn=1
+    exec_MouseY()
+  End if
+END IF
+
+'message OFF
+IF key = R_OFF
+ If EventOn=1
+   goto out
+ end if
+END IF
+
+
+
+
+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+If perr=1 
+print "Error -> Exit from Main Loop!"
+'EXIT For
+goto out
+End If
+'Next LineNum ---------------------------
+If EventOn = 0
+    while PeekMessage (&wm,0,0,0,Pm_Remove)>0 ' //peek 
+       TranslateMessage (&wm)
+       DispatchMessage (&wm)
+    wend
+END IF
+ 
+
+'----------------------------------------
+'IF lineNum > EndCode then goto out
+
+Next lineNum
+
+out:
+'print "L-NUM:" + str(lineNum)
+Return
+
+End SUB  
+
+'********************************************************************* 
+'****                    EXECUTE FUNCTIONS                       *****
+'*********************************************************************
+SUB exec_SET
+'STRING arg[20]  'after RETURN this LOCAL string array is NOT released
+'number of expressions / a=b+1 , c=a+2 , ...... up to 8
+'1
+If arg1[PC] = "" then Return 
+    ParseExpr(arg1[PC])        
+'2  
+If arg2[PC] = "" then Return 
+	ParseExpr(arg2[PC])
+'3
+If arg3[PC] = "" then Return 
+	ParseExpr(arg3[PC])
+'4    
+If arg4[PC] = "" then Return 
+	ParseExpr(arg4[PC])
+'5
+If arg5[PC] = "" then Return 
+	ParseExpr(arg5[PC])
+'6
+If arg6[PC] = "" then Return 
+	ParseExpr(arg6[PC])
+'7
+If arg7[PC] = "" then Return 
+	ParseExpr(arg7[PC])
+'8
+If arg8[PC] = "" then Return 
+	ParseExpr(arg8[PC])
+'9
+If arg9[PC] = "" then Return 
+	ParseExpr(arg9[PC])
+
+'..............................
+'IF arg0[PC] <> ""
+print "Command SET have more than 8 parameters"
+'END IF
+RETURN
+ 
+End SUB
+
+'--------------------------------------------------------------------
+SUB exec_IF() as INT
+'syntax IF cond1 , operator , cond2
+STRING cond1,op,cond2
+cond1 = arg1[PC] : op = arg2[PC] : cond2 = arg3[PC]
+FLOAT c1,c2
+STRING c1L,c2L,k
+INT res,pos=0
+'------------------ cond 1
+c1L=Left(cond1,1)
+If Instr("0123456789.",c1L) > 0
+'if is number then error?
+print "ERROR: First argument must be variable!"
+Return
+Else
+'if is variable ok!
+IF Instr(cond1,"[")=0
+  c1 = GetIntValue(cond1)
+ELSE
+  c1 = GetArrayValue(cond1)
+END IF
+End If
+'----------------- cond 2
+c2L=Left(cond2,1)
+If Instr("0123456789.",c2L) > 0
+'if is number
+c2 = Val(cond2)
+Else
+'if is variable
+IF Instr(cond2,"[")=0
+c2 = GetIntValue(cond2)
+ELSE
+  c2 = GetArrayValue(cond2)
+END IF
+End If
+'......................................
+' select operator : [<] [>] [=] {!}not
+'......................................
+'print "c1:" + str(c1) +"-" + "c2:" + str(c2)
+'less
+IF op = "<"	
+		IF c1 < c2
+        'print "IS TRUE"
+		res = TRUE
+		ELSE
+        'print "IS FALSE"
+         res = FALSE
+		END IF
+END IF
+'greater
+IF op = ">"
+		IF c1 > c2
+		res = TRUE
+		ELSE
+         res = FALSE
+		END IF
+END IF
+'equal
+IF op = "="
+		IF c1 = c2
+		res = TRUE
+		ELSE
+         res = FALSE
+		END IF
+END IF
+'not equal
+IF op = "!"
+		IF c1 <> c2
+		res = TRUE
+		ELSE
+         res = FALSE
+		END IF
+END IF
+
+'test res....
+'print "IF-RES->" + str(res)
+IF res = TRUE
+  '..continue
+pos = PC 
+'print "LINE:" + str(pos)
+  Return pos
+END IF
+
+IF res = FALSE
+'skip line to keyword-> ENDIF
+pos=PC   ' current line->PC
+'print "POS:" + str(pos)
+do
+	'PC = PC + 1
+     k = arg0[pos]
+     IF k = "ENDIF" THEN exit do
+     pos=pos+1
+end do
+'pos = PC + 1 ' line after ENDIF
+Return pos
+END IF
+
+END SUB
+
+'--------------------------------------------------------------------
+
+SUB exec_WINDOW
+'<syntax> wFORM  0, 0, 400, 300, #MMS,0, 'New Caption!
+	'print "PC:" + PC
+STRING x,y,w,h,style,parent,caption,wCaption
+STRING xL,yL,wL,hL
+INT xi,yi,wi,hi,wStyle,wParent
+x = arg1[PC] : y = arg2[PC] : w = arg3[PC] : h = arg4[PC]  'size
+style = arg5[PC]  'win style
+parent = arg6[PC]  ' win parent
+caption = arg7[PC]  'win title text
+'---------------------------------------
+xL=Left(x,1)
+If Instr("0123456789.",xL) > 0
+'if is number
+xi = Val(x)
+Else
+'if is variable
+xi = GetIntValue(x)
+End If
+'---------------------------------------
+yL=Left(y,1)
+If Instr("0123456789.",yL) > 0
+'if is number
+yi = Val(y)
+Else
+'if is variable
+yi = GetIntValue(y)
+End If
+'----------------------------------------
+wL=Left(w,1)
+If Instr("0123456789.",wL) > 0
+'if is number
+wi = Val(w)
+Else
+'if is variable
+wi = GetIntValue(w)
+End If
+'----------------------------------------
+hL=Left(h,1)
+If Instr("0123456789.",hL) > 0
+'if is number
+hi = Val(h)
+Else
+'if is variable
+hi = GetIntValue(h)
+End If
+'---------------------------------------
+
+If style = "#MMS" 
+wStyle = WS_MINMAXSIZE or 16
+
+ElseIf style = "#SYS"
+wStyle = WS_SYSMENU or 16
+
+End If
+
+'----------------------------------------
+'parent...
+wParent = Val(parent)
+
+'---------------------------------------
+If Left(caption,1) = Chr(34)
+wCaption = GetStrLiteral(caption)
+'print "WCAPTION:" + wcaption
+End If
+
+'---------------------------------------
+'open new window
+win2 = SetWindow(wCaption,xi,yi,wi,hi,wParent,wStyle)
+'SetFocus win2
+Randomize()
+'ruben4 - dis InitDrawing(win2)
+InitDrawing(win2)
+executed++
+'print "EXEC::"+str(executed)
+Return
+End SUB
+
+'==========================================================
+SUB exec_WINCONTROL
+'<syntax> WCON  0, 0, 400, 300, $BUTTON, cID, $'Caption'
+	'print "PC:" + PC
+STRING x,y,w,h,controlType,cntID,caption,cCaption
+STRING xL,yL,wL,hL,cType
+INT xi,yi,wi,hi,cId,cFlag
+x = arg1[PC] : y = arg2[PC] : w = arg3[PC] : h = arg4[PC]  'size
+controlType = arg5[PC]  ' control type
+cntID = arg6[PC]        ' control ID
+caption = arg7[PC]      ' control title text (caption)
+'---------------------------------------
+xL=Left(x,1)
+If Instr("0123456789.",xL) > 0
+'if is number
+xi = Val(x)
+Else
+'if is variable
+xi = GetIntValue(x)
+End If
+'---------------------------------------
+yL=Left(y,1)
+If Instr("0123456789.",yL) > 0
+'if is number
+yi = Val(y)
+Else
+'if is variable
+yi = GetIntValue(y)
+End If
+'----------------------------------------
+wL=Left(w,1)
+If Instr("0123456789.",wL) > 0
+'if is number
+wi = Val(w)
+Else
+'if is variable
+wi = GetIntValue(w)
+End If
+'----------------------------------------
+hL=Left(h,1)
+If Instr("0123456789.",hL) > 0
+'if is number
+hi = Val(h)
+Else
+'if is variable
+wi = GetIntValue(h)
+End If
+'---------------------------------------
+'select control type
+If controlType = "$BUTTON" 
+cType = "BUTTON"
+cFlag = 0x50000000
+_ext = 0
+'............................
+ElseIf controlType = "$EDIT"
+cType = "EDIT"
+cFlag = 0x50004000
+_ext = 0x200
+'............................
+ElseIf controlType = "$EDITM"
+cType = "EDIT"
+cFlag = 0x50B010C4
+_ext = 0x200
+'............................
+ElseIf controlType = "$LISTBOX"
+cType = "LISTBOX"
+cFlag = 0x50A00140 or CTLISTNOTIFY
+_ext = 0x200
+
+
+
+End If
+
+'----------------------------------------
+'control ID.../numeric/
+cID = VAL( cntID )
+
+'---------------------------------------
+'control caption.../text/
+If Left(caption,1) = Chr(34)
+cCaption = GetStrLiteral(caption)
+End If
+'else get->string.../../
+
+'---------------------------------------
+'add new control to window
+
+'-----------------------------------------
+INT cHwnd = win2
+'--------------------------------------------------------------------------------------
+hControl = CreateWindowEx(_ext,strptr cType, cCaption, cFlag, xi, yi, wi, hi, win2, cId, 0, 0)
+cFont = GetStockObject(17)
+SendMessage hControl,WM_SETFONT,cFont,0
+UpdateWindow hControl
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+ReleaseDC( win2, hdc)
+END SUB
+
+
+'==========================================================
+SUB exec_TxColor
+STRING sfr,sfg,sfb,sbr,sbg,sbb
+STRING Lfr,Lfg,Lfb,Lbr,Lbg,Lbb
+INT ifr,ifg,ifb,ibr,ibg,ibb
+
+sfr = arg1[PC] : sfg = arg2[PC] : sfb = arg3[PC]  'front RGB
+sbr = arg4[PC] : sbg = arg5[PC] : sbb = arg6[PC]  'back RGB
+
+
+'---------------------------------------
+Lfr = Left(sfr,1)
+If Instr("0123456789.",Lfr) > 0
+'if is number
+ifr = Val(sfr)
+Else
+'if is variable
+ifr = GetIntValue(sfr)
+End If
+'---------------------------------------
+Lfg=Left(sfg,1)
+If Instr("0123456789.",Lfg) > 0
+'if is number
+ifg = Val(sfg)
+Else
+'if is variable
+ifg = GetIntValue(sfg)
+End If
+'----------------------------------------
+Lfb=Left(sfb,1)
+If Instr("0123456789.",Lfb) > 0
+'if is number
+ifb = Val(sfb)
+Else
+'if is variable
+ifb = GetIntValue(sfb)
+End If
+'----------------------------------------
+'----------------------------------------
+Lbr=Left(sbr,1)
+If Instr("0123456789.",Lbr) > 0
+'if is number
+ibr = Val(sbr)
+Else
+'if is variable
+ibr = GetIntValue(sbr)
+End If
+'---------------------------------------
+Lbg=Left(sbg,1)
+If Instr("0123456789.",Lbg) > 0
+'if is number
+ibg = Val(sbg)
+Else
+'if is variable
+ibg = GetIntValue(sbg)
+End If
+'----------------------------------------
+Lbb=Left(sbb,1)
+If Instr("0123456789.",Lbb) > 0
+'if is number
+ibb = Val(sbb)
+Else
+'if is variable
+ibb = GetIntValue(sbb)
+End If
+'
+'---------------------------------------
+TextColor (win2 ,RGB(ifr,ifg,ifb),RGB(ibr,ibg,ibb))
+'RGB(ibr,ibg,ibb )
+End SUB
+
+'===================================================== 
+SUB exec_WTEXT
+STRING tx,ty,itext,stext
+INT x,y,c
+FLOAT tmp
+tx = arg1[PC] : ty = arg2[PC] : itext = arg3[PC]
+'---------------------------------------
+String xL,yL
+xL=Left(tx,1)
+If Instr("0123456789.",xL) > 0
+'if is number
+x = Val(tx)
+Else
+'if is variable
+x = GetIntValue(tx)
+End If
+'---------------------------------------
+yL=Left(ty,1)
+If Instr("0123456789.",yL) > 0
+'if is number
+y = Val(ty)
+Else
+'if is variable
+y = GetIntValue(ty)
+End If
+'---------------------------------------
+''show text $ on window .............................
+If Left(itext,1) = Chr(34)
+stext = GetStrLiteral(itext)
+TextOn( win2,x, y, stext)
+End If
+'show variable value .............................
+If Left(itext,1) <> Chr(34) AND Instr(itext,"[")=0
+tmp=GetIntValue(itext)
+stext=str(tmp)
+TextOn( win2,x, y, stext)
+End If
+'show array element value ..........................
+If Left(itext,1) <> Chr(34) AND Instr(itext,"[")<>0
+stext = GetArrayValue(itext)
+'stext=str(tmp)
+TextOn( win2,x, y, stext)
+End If
+
+End SUB
+
+'=============================================================
+
+SUB exec_MBoxGetWord
+STRING dtext,gtext,delimiter,srctext
+STRING tbuff
+delimiter = arg1[PC] : srctext = arg2[PC] 
+'get quoted text  "text"
+dtext = GetStrLiteral(delimiter)
+tbuff = tbuff + dtext + CRLF
+gtext = GetStrLiteral(srctext)
+tbuff = tbuff + gtext + CRLF
+print tbuff
+
+'close main program
+SendMessage win,WM_DESTROY,0,0
+ExitProcess 0
+END SUB
+
+'============================================================
+SUB exec_FOR
+STRING fns,fss,fes,strStep
+INT n,s,e,iStep=0
+fns = arg1[PC] : fss = arg2[PC] : fes = arg3[PC] 
+
+'---------------------------------------
+String nL,sL,eL,stL
+
+nL=Left(fns,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+n = Val(fns)
+Else
+'if is variable
+n = GetIntValue(fns)
+End If
+'---------------------------------------
+sL=Left(fss,1)
+If Instr("0123456789.",sL) > 0
+'if is number
+s = Val(fss)
+Else
+'if is variable
+s = GetIntValue(fss)
+End If
+'---------------------------------------
+eL=Left(fes,1)
+If Instr("0123456789.",eL) > 0
+'if is number
+e = Val(fes)
+Else
+'if is variable
+e = GetIntValue(fes)
+End If
+
+fpush = fpush + 1 : 'SetForParametars()
+forStart = s : 'SetIntValue( arg2[PC], forStart)
+forEnd[fpush] = e : 'SetIntValue( arg3[PC], forEnd[fpush])
+	fStack[fpush] = fns   'arg1 string (for n)
+	forPos[fpush] = PC      '
+	fc[fpush] = forStart
+	If fc[fpush]=forStart
+	SetForCounter()
+	End If
+
+'if step exists
+IF arg4[PC] <> ""
+   stL=Left(arg4[PC],1)
+   If Instr("0123456789.",stL) > 0
+'  if is number
+   iStep = Val(arg4[PC])
+   Else
+   'if is variable
+   iStep = GetIntValue(arg4[PC])
+End If
+END IF
+'------------
+
+IF iStep = 0
+fStep[fpush] = 1
+ELSE
+'print "STEP:" + str(iStep)
+fStep[fpush] = iStep
+END IF
+'--------------
+Return
+End SUB
+
+'..................................
+SUB SetForParametars
+STRING signf1,signf2
+'fPush=fPush+1 for i , s, e
+'-----------------------------------------------------
+	signf1 = Left(arg2[PC],1)	
+	'if is number --> FOR x = 1 TO 100
+	If Instr("0123456789.", signf1)<> 0
+		forStart = Val(arg2[PC])	
+		SetIntValue( arg1[PC], forStart)
+		'forStart = temp
+         
+    Else
+     forStart = GetIntValue(arg2[PC])
+     SetIntValue( arg1[PC], forStart)
+	'forStart = temp
+	End If
+	
+'-----------------------------------------------------	
+	signf2 = Left(arg3[PC],1)		
+	If Instr("0123456789.", signf2)<> 0		
+	    forEnd[fpush] = Val(arg3[PC])
+	'if is variable -->
+     Else
+	forEnd[fpush] = GetIntValue(arg3[PC])
+	End If
+'------------------------------------------------------------
+'for stepfStep[fpush]=1
+
+
+Return
+End SUB
+'......................................................
+SUB SetForCounter
+'print "FORCOUNTER:" + Str(fc[fpush])
+SetIntValue( arg1[PC], fc[fpush])
+Return			
+End SUB
+
+'----------------------------------------------------------------
+SUB exec_NEXT
+'shift i
+'print "execNEXT"
+If (fc[fpush] = forEnd[fpush]) And (fStack[fpush] = arg1[PC])
+	 forStart=0 : forEnd[fpush]=0 : fc[fpush]=0 :fStep[fpush]=0
+	fpush = fpush - 1 
+'print "fpush-1"
+End If
+
+If (fc[fpush] <= forEnd[fpush]) And (fStack[fpush] = arg1[PC])
+	fc[fpush] = fc[fpush] + fStep[fPush] 
+	SetForCounter()
+	'INT forStart,fc[100],forEnd[100]
+     'INT fPush,fStep[100],forPos[100]
+     'STRING fStack[16]	
+	LineNum = forPos[fpush]
+   'print "LNUM:" + Str(LineNum)
+End If
+
+Return
+End SUB
+'---------------------------------------------------------------
+SUB exec_LineXY
+'STRING s1,s2,s3,s4
+STRING L
+INT x1,y1,x2,y2
+
+'s1 = arg1[PC] : s2 = arg2[PC] : s3 = arg3[PC] :s4 = arg4[PC]  'size
+
+'---------------------------------------
+L=Left(arg1[PC],1)
+If Instr("0123456789.-",L) > 0
+'if is number
+x1 = Val(arg1[PC])
+Else
+'if is variable
+x1 = GetIntValue(arg1[PC])
+End If
+'---------------------------------------
+L=Left(arg2[PC],1)
+If Instr("0123456789.-",L) > 0
+'if is number
+y1 = Val(arg2[PC])
+Else
+'if is variable
+y1 = GetIntValue(arg2[PC])
+End If
+'----------------------------------------
+L=Left(arg3[PC],1)
+If Instr("0123456789.-",L) > 0
+'if is number
+x2 = Val(arg3[PC])
+Else
+'if is variable
+x2 = GetIntValue(arg3[PC])
+End If
+'----------------------------------------
+L=Left(arg4[PC],1)
+If Instr("0123456789.-",L) > 0
+'if is number
+y2 = Val(arg4[PC])
+Else
+'if is variable
+y2 = GetIntValue(arg4[PC])
+End If
+'----------------------------------------
+LineXY (win2,x1,y1,x2,y2)
+
+
+End SUB
+'---------------------------------------------------------------
+SUB exec_RECT
+'STRING s1,s2,s3,s4
+STRING Lrx1,Lry1,Lrx2,Lry2
+INT rectX,rectY,rectW,rectH
+
+'s1 = arg1[PC] : s2 = arg2[PC] : s3 = arg3[PC] :s4 = arg4[PC]  'size
+
+'---------------------------------------
+Lrx1=Left(arg1[PC],1)
+If Instr("0123456789.-",Lrx1) > 0
+'if is number
+rectX = Val(arg1[PC])
+Else
+'if is variable
+rectX = GetIntValue(arg1[PC])
+End If
+'---------------------------------------
+Lry1=Left(arg2[PC],1)
+If Instr("0123456789.-",Lry1) > 0
+'if is number
+rectY = Val(arg2[PC])
+Else
+'if is variable
+rectY = GetIntValue(arg2[PC])
+End If
+'----------------------------------------
+Lrx2=Left(arg3[PC],1)
+If Instr("0123456789.-",Lrx2) > 0
+'if is number
+rectW = Val(arg3[PC])
+Else
+'if is variable
+rectW = GetIntValue(arg3[PC])
+End If
+'----------------------------------------
+Lry2=Left(arg4[PC],1)
+If Instr("0123456789.-",Lry2) > 0
+'if is number
+rectH = Val(arg4[PC])
+Else
+'if is variable
+rectH = GetIntValue(arg4[PC])
+End If
+'----------------------------------------
+DrawRect(win2,rectX,rectY,rectW,rectH)
+
+
+End SUB
+'---------------------------------------------------------------
+SUB exec_Circle
+STRING s1,s2,s3
+STRING L
+INT x1,y1,rc
+
+s1 = arg1[PC] : s2 = arg2[PC] : s3 = arg3[PC]  'size
+
+'---------------------------------------
+L=Left(s1,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+x1 = Val(s1)
+Else
+'if is variable
+x1 = GetIntValue(s1)
+End If
+'---------------------------------------
+L=Left(s2,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+y1 = Val(s2)
+Else
+'if is variable
+y1 = GetIntValue(s2)
+End If
+'----------------------------------------
+L=Left(s3,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+rc = Val(s3)
+Else
+'if is variable
+rc = GetIntValue(s3)
+End If
+'----------------------------------------
+
+'----------------------------------------
+Circle (win2,x1,y1,rc)
+
+End SUB
+
+'---------------------------------------------------------------
+SUB exec_PsetXY
+STRING pxs,pys,ex,ey
+INT x,y
+pxs = arg1[PC] : pys = arg2[PC]
+'---------------------------------------
+String xL,yL
+xL=Left(pxs,1)
+If Instr("0123456789.",xL) > 0
+'if is number
+x = Val(pxs)
+Else
+'if is variable or array element
+	IF instr(pxs,"[")=0  'variable
+	x = GetIntValue(pxs)
+	ELSE
+	ex = GetArrayValue(pxs)
+     x = VAL(ex)
+	END IF
+End If
+'---------------------------------------
+yL=Left(pys,1)
+If Instr("0123456789.",yL) > 0
+'if is number
+y = Val(pys)
+Else
+'if is variable or array element
+	IF instr(pys,"[")=0  'variable
+	y = GetIntValue(pys)
+	ELSE
+	ey = GetArrayValue(pys)
+     y = VAL(ey)
+	END IF
+End If
+
+'draw pixel
+Pset ( win2, x, y)
+
+End SUB
+
+'--------------------------------------------------------------- 
+SUB exec_JUMP() as INT
+'syn JUMP label
+string mark,name : INT pos,i 
+mark = arg1[PC]
+'print "Mark-Label" + mark
+For i = 1 TO 100
+ 'print  "LN:" + labelName[i] 
+	IF mark = labelName[i]
+         pos = labelPos[i]
+         'print "LABEL->POS:" + str(pos)
+         Return pos
+	END IF
+Next i
+print "ERROR: Label Not Found!->" + mark
+perr=1 '->exit from main
+Return 0
+END SUB
+
+'#########################################################################
+SUB exec_WAIT
+EventOn=1
+'print "WAIT::EXECUTED!"
+RETURN
+END SUB 
+'########################################################################
+SUB exec_MouseX
+STRING mxs
+INT mxv
+mxs = arg1[PC] 
+mxv = GetMouseX
+SetIntValue (mxs,mxv)
+
+END SUB
+'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+SUB exec_MouseY
+STRING mys
+INT myv
+mys = arg1[PC] 
+myv = GetMouseY
+SetIntValue (mys,myv)
+END SUB
+'////////////////////////////////////////////////////////////////////////////
+'SUB exec_CALL () as INT
+'gPush = gPush+1
+		'gStack[gpush] = PC : subname=arg2[PC]
+			'MessageBox 0,"GOSUBSTACK(GPUSH):"+str$(gStack[gpush])+",gPush:"+str$(gPush),"SUB-Runscript"
+	'FindFunc()
+		'IF error=1
+		'print "Error:Subroutine not found!"
+		'showerror()
+		'error=1:RETURN
+		'ENDIF
+			'MessageBox 0,"SUB-POS(gPush):"+str$(subpos[gpush]),"SUB-Runscript"		
+		'PC = subpos[gpush]
+
+'RETURN
+'END SUB
+'////////////////////////////////////////////////////////////////////////////
+SUB exec_RETURN
+retPos = gStack[gPush]
+	start = retPos : gPush=gPush-1
+	
+RETURN
+END SUB
+
+'---------------------------------------------------------------
+' WINDOW FILL COLOR
+SUB exec_WINCOLOR
+STRING s1,s2,s3
+STRING L
+INT x1,y1,rc
+
+s1 = arg1[PC] : s2 = arg2[PC] : s3 = arg3[PC]  'R;G;B
+
+'---------------------------------------
+L=Left(s1,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+x1 = Val(s1)
+Else
+'if is variable
+x1 = GetIntValue(s1)
+End If
+'---------------------------------------
+L=Left(s2,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+y1 = Val(s2)
+Else
+'if is variable
+y1 = GetIntValue(s2)
+End If
+'----------------------------------------
+L=Left(s3,1)
+If Instr("0123456789.-",L) > 0
+'if is number
+rc = Val(s3)
+Else
+'if is variable
+rc = GetIntValue(s3)
+End If
+'----------------------------------------  
+WindowColor(win2,x1,y1,rc)
+  
+END SUB
+
+'---------------------------------------------------------------         
+FUNCTION GetIntValue (byref vName as string) As FLOAT
+FLOAT ret=0 : INT f=0
+'print "VAR-LAST_POS:" +Str(varLastPos)
+For n = 1 TO varLastPos
+  If varName[n] = vName 
+       ret = varValue[n]
+     f = 1
+     'print "Variable :" vName " ->Found, OK!"
+     Return ret 
+  End If
+Next n
+
+If f=0 
+print "(GET)EXIT:Variable Not Found! -> " + vName " ,Line: " + Str(PC)
+perr=1
+Return 0
+End If
+
+End FUNCTION
+'-------------------------------------------------------------
+FUNCTION SetIntValue (byval vName as string,byval tval as FLOAT)
+INT f=0 
+For n = 1 TO varLastPos
+  If varName[n] = vName 
+       varValue[n] = tval
+     'print "Variable: " + vName + " set with value: " + Str(varValue[n])
+     f=1
+     'print "Value stored into variable -> " + vName
+     'print "Value is :" + Str(varValue[n])
+     Return  
+  End If
+Next n
+
+If f=0 
+print "(SET)EXIT:Variable Not Found! -> " + vName " ,Line: " + Str(PC)
+perr=1
+Return
+End If
+
+End FUNCTION
+'-------------------------------------------------------------
+FUNCTION SetIntArray(byval aName as string,byval res as string)
+INT bo,bc,n
+STRING ts,name,index,id
+ts=aName
+bo=INSTR(ts,"[")
+name=mid(ts,1,bo-1) 'get name $[]  ' arr[f]
+bc=instr(ts,"]")
+index = mid(ts,bo+1,(bc-bo)-1)  'get index [i]
+
+
+'n=1
+FOR n = 1 TO 16        ' up to 16 arrays
+IF arrStack[n] = name  'a
+id = arrID[n]          'id = 1
+'print "arr ID->" + arrID[n]
+   IF id = "1" 
+     'print "res->" + res
+     SetArray01(index,res)  'example -> a[3] = res 
+     Return
+   END IF
+   IF id = "2" 
+     SetArray02(index,res) 
+     Return
+   END IF
+   IF id = "3" 
+     SetArray03(index,res) 
+     Return
+   END IF
+   IF id = "4" 
+     SetArray04(index,res) 
+     Return
+   END IF
+   IF id = "5" 
+     SetArray05(index,res) 
+     Return
+   END IF
+   IF id = "6" 
+     SetArray06(index,res) 
+     Return
+   END IF
+   IF id = "7" 
+     SetArray07(index,res) 
+     Return
+   END IF
+   IF id = "8" 
+     SetArray08(index,res) 
+     Return
+   END IF
+  
+END IF
+
+NEXT n
+
+print "ERROR : Array NOT Found!"
+END FUNCTION
+
+'-----------------------------------------------------------
+FUNCTION GetArrayValue(byval aName as string) as String
+INT bo,bc,n
+STRING ts,name,index,id,res
+ts=aName
+bo=INSTR(ts,"[")
+name=mid(ts,1,bo-1) 'get name $[]
+bc=instr(1,ts,"]")
+index = mid(ts,bo+1,(bc-bo)-1)  'get index [i]
+
+'n=1
+FOR n = 1 TO 16        ' up to 16 arrays
+IF arrStack[n] = name  'a
+id = arrID[n]          'id = 1
+'print "arr ID->" + arrID[n]
+   IF id = "1" 
+     'print "res->" + res
+     res=GetArray01(index)  'example -> a[3] = res 
+     Return res
+   END IF
+   IF id = "2" 
+     res=GetArray02(index) 
+     Return res
+   END IF
+   IF id = "3" 
+     res=GetArray03(index) 
+     Return res
+   END IF
+   IF id = "4" 
+     res=GetArray04(index) 
+     Return res
+   END IF
+   IF id = "5" 
+     res=GetArray05(index) 
+     Return res
+   END IF
+   IF id = "6" 
+     res=GetArray06(index) 
+     Return res
+   END IF
+   IF id = "7" 
+     res=GetArray07(index) 
+     Return res
+   END IF
+   IF id = "8" 
+     res=GetArray08(index) 
+     Return res
+   END IF
+   
+
+END IF
+
+NEXT n
+
+print "ERROR : Array NOT Found!"
+
+END FUNCTION
+
+'-------------------------------------------------------------
+FUNCTION GetStrLiteral (byval quotedStr as string) as String
+String strOut
+'print quotedStr + LEN(quotedStr)
+strOut = Mid(quotedStr,2,Len(quotedStr)-2)
+'print "StrOUT:" + strOut
+Return strOut
+End FUNCTION 
+
+'+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+SUB ParseExpr (string expr)
+String v$,vName
+STRING result
+INT eqpos
+'check if expr or varname
+INT isExpr : FLOAT temp
+'If isExpr=0 then isExpr=Instr(1,expr,"+")
+'If isExpr=0 then isExpr=Instr(1,expr,"-")
+'If isExpr=0 then isExpr=Instr(1,expr,"*")
+'If isExpr=0 then isExpr=Instr(1,expr,"/")
+'If isExpr=0 then isExpr=Instr(1,expr,"(")
+'.....................................................
+'If isExpr <> 0 
+'is expression 
+String cExpr
+'get equal sign position...
+eqPos=Instr(1,expr,"=")
+'get content of expression...
+cExpr = Mid(expr,eqPos+1,Len(expr))
+cExpr = Trim(cExpr)
+'>>>print "CEXPR:" + cExpr
+'get var name
+v$=Mid(expr,1,eqPos-1)
+vName = Trim(v$)
+'print "VAR-name:"+vName
+
+'Evaluate expression...>>>>>>>>>><
+'temp = EvaL_Expr(cExpr)
+temp = EvaLLine(cExpr)
+
+'print "result->" + result
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+'store int value into variable
+IF InStr(vName,"[") = 0
+'print "NOT ARRAY"
+SetIntValue (vName,temp)
+ELSE
+'print "IS ARRAY"
+result=str(temp)
+SetIntArray(vName,result)
+END IF
+
+Return 
+
+End SUB
+
+
+'[[[[ ARRAY 01 ]]]]]]]]]]]
+SUB SetArray01(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr01[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+
+'[[[[ ARRAY 02 ]]]]]]]]]]]
+SUB SetArray02(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr02[i] = newValue
+'check...
+'print arr02[i]
+END SUB
+
+'[[[[ ARRAY 03 ]]]]]]]]]]]
+SUB SetArray03(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr03[i] = newValue
+'check...
+'print arr03[i]
+END SUB
+
+'[[[[ ARRAY 04 ]]]]]]]]]]]
+SUB SetArray04(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr04[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+
+'[[[[ ARRAY 05 ]]]]]]]]]]]
+SUB SetArray05(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr05[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+
+'[[[[ ARRAY 06 ]]]]]]]]]]]
+SUB SetArray06(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr06[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+
+'[[[[ ARRAY 07 ]]]]]]]]]]]
+SUB SetArray07(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr07[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+
+'[[[[ ARRAY 08 ]]]]]]]]]]]
+SUB SetArray08(byval ndx as string ,byval newValue as string)
+String nL
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+arr08[i] = newValue
+'check...
+'print arr01[i]
+END SUB
+'
+'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+'<<<<<<<<<<< GET ARRAY ELEMENT VALUE BY INDEX >>>>>>>>>>>>>>>>>>>>>>>>>>
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+FUNCTION GetArray01(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr01[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray02(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr02[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray03(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr03[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray04(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr04[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray05(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr05[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray06(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr06[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray07(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr07[i]
+'check...
+RETURN out
+END FUNCTION
+
+FUNCTION GetArray08(byval ndx as string ) as String
+String nL,out
+INT i
+nL=Left(ndx,1)
+If Instr("0123456789.",nL) > 0
+'if is number
+i = Val(ndx)
+Else
+'if is variable
+i = GetIntValue(ndx)
+End If
+'set array element (index) with new value as $
+out = arr08[i]
+'check...
+RETURN out
+END FUNCTION
+
+'==========================================================================
+FUNCTION Right(byval getStr As String,byval rLen As Int) As String
+String retStr
+retStr = Mid(getStr,-(rLen))
+Return retStr
+End FUNCTION
+'==========================================================================
+' /////// Init GDI drawing functions from win32 Api \\\\\\\\\\
+'==========================================================================
+SUB InitDrawing(byval wnd as INT)
+'INT ww,hh
+''get current size of window
+GetSize(wnd,0,0,ww,hh)
+'get window DC
+hdc=GetDC(wnd)
+hdcMem = CreateCompatibleDC(0)
+hbmMem = CreateCompatibleBitmap(hdc,ww,hh)
+oldBmp = SelectObject( hdcMem, hbmMem )
+oldBrush = SelectObject(hdcMem, CreateSolidBrush( RGB(231,223,231)) )
+oldPen = SelectObject(hdcMem, CreatePen(PS_SOLID,1,RGB(231,223,231)))
+'fill rectangle memDC with brush color
+rc.right = ww
+rc.bottom = hh 
+
+FillRect ( hdcMem,rc, oldBrush) 
+SetTextColor( hDC,RGB(0,0,0))
+SetBkColor( hDC, RGB(231,223,231))
+'blit to memDC
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+DeleteObject oldBmp
+DeleteObject oldBrush
+DeleteObject oldPen
+'UpdateWindow wnd
+ReleaseDC( wnd, hdc)
+End SUB
+
+'=================================================
+SUB TextColor (wID as INT,byval frontColor as sys,byval backColor as sys)
+'hdc = GetDC(wID)
+fColor=frontColor
+bColor = backColor
+SetTextColor( hDC, frontColor)
+SetBkColor( hDC, bColor)
+
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+
+ReleaseDC( wID, hdc)
+
+End SUB 
+'=================================================
+Sub TextOn( int wnd,sys x, y, string txt)
+'INT ww,hh
+'hdc=GetDC(wnd)
+'GetSize(wnd,0,0,ww,hh)
+TextOut hdc,x,y,txt,Len(txt)
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+ReleaseDC(wnd,Hdc)
+End Sub
+
+'=================================================
+SUB LineXY (wID as INT,byval x as INT,byval y as INT,byval x1 as INT,byval y1 as INT)
+
+'hdc = GetDC(wID)
+'GetSize(wID,0,0,ww,hh)
+'SelectObject(hdc, CreatePen(PS_SOLID,1,fColor))
+ int np = CreatePen(PS_SOLID,1,fColor)
+ int op = SelectObject(hdc, np)
+
+MoveToEx hdc,x,y,Byval 0
+LineTo hdc,x1,y1
+
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+DeleteObject(SelectObject(hdc, op))
+ReleaseDC( wID, hdc)
+
+End SUB
+
+'=================================================
+SUB DrawRect (wID as INT,byval rx1 as INT,byval ry1 as INT,byval rx2 as INT,byval ry2 as INT)
+'hdc = GetDC(wID)
+'GetSize(wID,0,0,ww,hh)
+
+SetBkMode( hDC, 1) 'transparent
+SetBkColor(hDC, RGB(220,220,250))
+int np = CreatePen(PS_SOLID,1,fColor)  'new pen
+int op = SelectObject(hdc, np)
+int nB = CreateSolidBrush( bColor)   'new Brush
+int oB = SelectObject(hdc, nB)
+'Rectangle bHdc,x,y,w+x,h+y ...hmmm
+Rectangle (hdc,rx1,ry1,rx2+rx1,ry2+ry1)
+
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+DeleteObject(SelectObject(hdc, op))
+DeleteObject(SelectObject(hdc, oB))
+ReleaseDC( wID, hdc)
+END SUB
+
+'=================================================
+SUB Pset (wID as int , px as int ,py as int)
+'hdc = GetDC(wID)
+'GetSize(wID,0,0,ww,hh)
+SetPixel ( hdc, px, py, fColor)
+
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+
+ReleaseDC( wID, hdc)
+
+End SUB
+
+'====================================================================================
+SUB Circle (wID as INT,byval cix as INT,byval ciy as INT,byval cra as INT)
+
+'hdc = GetDC(wID)
+'GetSize(wID,0,0,ww,hh)
+'SelectObject(hdc, CreatePen(PS_SOLID,1,fColor))
+
+SetBkMode( hDC, 1) 'transparent
+SetBkColor(hDC, RGB(220,220,250))
+int np = CreatePen(PS_SOLID,1,fColor)  'new pen
+int op = SelectObject(hdc, np)
+int nB = CreateSolidBrush( bColor)   'new Brush
+int oB = SelectObject(hdc, nB)
+
+Ellipse hdc,cix-cra,ciy-cra,cra+cix,cra+ciy
+
+BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+DeleteObject(SelectObject(hdc, op))
+DeleteObject(SelectObject(hdc, oB))
+ReleaseDC( wID, hdc)
+End SUB
+'====================================================================================
+' set window color 
+Sub FillSolidRect(wID as INT, x As Long, Y As Long, cx As Long, cy As Long, bbColor as INT) 
+    INT hBr,oBr ' rc As RECT 
+    'hDC=GetDC(wID)
+    rc.Left = x 
+    rc.Top = Y 
+    rc.right = x + cx 
+    rc.bottom = Y + cy 
+    hBr = CreateSolidBrush(bbColor)
+    'oBr = SelectObject hdc,hBr
+    FillRect hDC, rc, hBr 
+    DeleteObject hBr
+    BitBlt(hDCmem, 0, 0, ww, hh, hdc, 0, 0, SRCCOPY)
+    'DeleteObject(SelectObject(hdc, oBr))
+    ReleaseDC( wID, hdc) 
+End Sub 
+'----------------------------------------------------------
+SUB WindowColor(wID as INT,wr as INT,wg as INT,wb as INT)
+INT backColor = RGB (wr,wg,wb)
+FillSolidRect(wID,0,0,ww,hh,backColor)
+
+END SUB
+
+'//////////////////////////////////////////////
+SUB CleanUp
+DeleteObject(SelectObject(hdcMem, oldBrush))
+DeleteObject(SelectObject(hdcMem, oldPen))
+DeleteObject(SelectObject(hdcMem, oldBmp))
+DeleteDC(hdcMem)
+End SUB
+'/////////////////////////////////////////////
+'math parser
+ 
+
+Function VisibleToken(STRING s) as string
+  Select s
+    Case CR
+'      s = "newline"
+    Case LF
+    '  s = "newline"
+    Case ""
+    '  s = "nothing"
+  End Select
+  Return s
+End Function
+
+';Cleanup then end
+Function Finish()
+  perr=1
+Return 0
+End Function
+
+';Report an error
+Function Error(string s)
+  print "Error: " + s + "."
+End Function
+
+';Report an error and abort
+Function Abort(STRING s)
+  Error(s)
+  Finish()
+End Function
+
+';Report what was expected
+Function Expected(STRING expect)
+  Abort("Expected: " + expect + ", got '" + VisibleToken(Look) + "'")
+Return 0
+End Function
+
+';Read a character into Look
+Goto GetChar_End
+sub GetChar
+'print "SUB->GETCHAR"
+  Look = Mid (Stream ,StreamPos,1)
+  'print "LOOK:" + Look
+  StreamPos =  StreamPos + 1
+  Return 
+end sub
+GetChar_End:
+
+
+';Match a specific input character
+Function Match(STRING s)
+'print "MATCH<s>" + s
+  If Look <> s
+'print "MATCH<Look>" + Look 
+    Expected("'"+ s +"'")
+  Else
+	'print "MATCH<else>"
+    Gosub getchar
+  End If
+End Function
+
+';Get a number-----------------------------------------------------
+Function GetNum() As Float
+
+  STRING Temp
+  
+    If Asc(look) > 47 and Asc(look) < 58  ' read chars as numbers
+       'print "need number"
+    End if
+
+	While (Asc(Look) > 47 And Asc(Look) < 58) Or Asc(Look) = 46' dec.point
+		Temp = Temp + Look
+		Gosub getchar
+         
+	Wend
+       
+  Return Val(Temp)
+End Function
+
+';Get variable ----------------------------------------------------------
+Function GetVar() as float
+'print "SUB->GETVAR"
+  STRING Temp,func,expr
+  FLOAT tempv
+  
+    'If Asc(look) < 96 and Asc(look) > 123  ' read chars as variable
+      ' print ("need variable")
+    'end if
+
+	While (Asc(Look) > 64 And Asc(Look) < 95) OR  (Asc(Look) > 96 And Asc(Look) < 123) OR  (Asc(Look) > 47 And Asc(Look) < 58)                             '; Works
+		Temp = Temp + Look
+		Gosub getchar
+         'print "GetVar-TEMP:" + Temp  
+        'IF         
+	Wend
+'test variable value .........GetIntValue (byref vName as string) As FLOAT
+'print "LOOK:" + Look
+ IF Look <> "(" 
+    If instr(Temp,"[") = 0
+	tempv = GetIntValue(Temp) 'not Array
+    Else  ' is array
+    ' print "TEMP:is array:" + Temp
+     tempv = GetArrayValue(Temp)
+    End if
+	'Return tempv
+ END IF
+
+'expected function..................
+IF Look = "("
+ 'temp = sin(90)
+'print "fTemp:" + temp   ' sin
+ Gosub getchar  'skip bracket (  Look +1
+While Look <> ""  ' ->...)
+  expr = expr + Look
+  Gosub getchar
+Wend
+'print "F->TEMP:" + expr  ' 90
+ tempv=GetFunc(temp,expr)
+ 'Return tempv
+ Gosub getchar
+END IF
+'...................................
+
+Return tempv
+ 
+End Function
+
+Declare function Expression() as float
+'==============================================================
+Function Factor() as float
+
+'print "SUB->FACTOR"
+  FLOAT Value
+'get number ----------------------------
+  If Asc(Look) > 47 And Asc(Look) < 58 
+    Return GetNum()
+  End if
+'get variable --------------------------  
+  If Asc(look) > 96 and asc(look) < 123 OR (Asc(Look) > 64 And Asc(Look) < 91)
+     return GetVar() 
+  End if
+'get parens ---------------------------
+If look <> ""
+    Match("(")
+  Value = Expression()
+    Match(")") 
+End If
+
+  Return Value
+End Function
+'==============================================================
+Function Term() as float
+  FLOAT Value,modV
+  Value = Factor()
+  While (Look = "%" ) Or (Look = "*" ) Or (Look = "/")
+'modulus -> integer division
+    If Look = "%"
+      Gosub getchar  
+      modV=Factor()
+	  Value = round(Value \modV)         
+    End If
+    If Look = "*"
+      Gosub getchar
+      Value = Value * Factor()
+    End If
+    If Look = "/"
+      Gosub getchar
+      Value = Value / Factor()
+    End If
+
+  Wend
+  Return Value
+End Function
+
+Function Expression() as float
+ FLOAT Value
+  If (Look = "-")
+    Gosub getchar
+    Value = -(Term())
+  Else
+    Value = Term()
+  End If
+
+  While (Look = "+") Or (Look = "-")
+    If Look = "+"
+      Gosub getchar
+      Value = Value + Term()
+    Else
+      Gosub getchar
+      Value = Value - Term()
+    End If
+  Wend
+
+  Return Value
+End Function
+
+Function EvaLLine(byval s as string) as float
+  Stream = Replace(s, " ", "")
+  StreamPos = 1
+  Gosub getchar
+'string out
+Float Tempv
+  Tempv = Expression()
+  'If StreamPos < Len(Stream) '; Error check, you
+    'Expected("nothing")      '; can remove them if you don't
+  'EndIf 
+  'out=str(Temp)                   '; need the check
+  Return Tempv
+End Function
+
+ 'print "RES:" + Solve("(1+2)*abc")
+'//// RND FUNCTION ///////////////////////////////////
+Function Rnd2(float d) as float
+d=1/0x7fffffff
+fseed=(fseed <<< 7)*13
+Return abs(d*fseed)
+End Function
+
+Function Rnd(float randMax) as float
+rret = Rand(0,randMax)/(randMax + 1.0)
+Return rret
+End Function
+
+'>->->->->  TURTLE FUNCTIONS  >->->->->->
+Function MoveForward(sys d) as sys
+    sys a, b, x, y 
+    'global kut
+    a = sin(kut * pi / 180) * d
+    b = cos(kut * pi / 180) * d
+    x = turtlex + a
+    y = turtley - b
+    LineXY (win2,turtlex, turtley, x, y)
+    turtlex = x
+    turtley = y
+End Function
+'------------------------------------------
+Function TurnRight(sys z) as sys 
+    kut = kut + z
+    if kut > 360 
+        kut = kut - 360
+    end if
+    if kut < 0 
+        kut = kut + 360
+    end if
+End Function
+'---------------------------------------------
+Function TurnLeft(sys z) as sys
+    kut = kut - z
+    if kut > 360 
+        kut = kut - 360
+    end if
+    if kut < 0 
+        kut = kut + 360
+    end if
+End Function
+'----------------------------------------------
+Sub TurtleXPos(sys zx) as sys
+turtlex = zx
+End Sub
+
+Sub TurtleYPos(sys zy) as sys
+turtley = zy
+End Sub
+'-----------------------------------------------
+
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Function GetFunc(string fname,expr) as Float
+string fn : float res
+fn=Ucase(fname)
+'print "FN:" + fn
+
+If fn = "SIN"
+   res= EvalLine(expr)
+   res= sin res
+   'print "FRES:" res
+   Return res
+End If
+
+If fn = "-SIN"
+   res= EvalLine(expr)
+   res= -sin(res)
+   'print "FRES:" res
+   Return res
+End If
+
+If fn = "COS"
+   res= EvalLine(expr)
+   Return cos(res)
+End If
+
+If fn = "TAN"
+   res= EvalLine(expr)
+   Return tan(res)
+End If
+
+If fn = "ATAN"
+   res= EvalLine(expr)
+   Return atn(res)
+End If
+
+If fn = "ABS"
+   res= EvalLine(expr)
+   Return ABS(res)
+End If
+
+If fn = "RND"
+   res= EvalLine(expr)
+   Return Rnd2(res)
+End If
+
+If fn = "RAND"
+res = EvalLine(expr)
+Return Rand(0,res)
+End If
+
+IF fn = "INT"
+res = EvalLine(expr)
+Return INT(res)
+End If
+
+IF fn = "ROUND"
+res = EvalLine(expr)
+Return ROUND(res)
+End If
+
+IF fn = "SQR"
+res = EvalLine(expr)
+Return SQR(res)
+End If
+
+IF fn = "LOG"
+res = EvalLine(expr)
+Return LOG(res)
+End If
+'------------------------
+IF fn = "MOVEF"
+res = EvalLine(expr)
+Return MoveForward(res)
+End If
+
+IF fn = "TURNL"
+res = EvalLine(expr)
+Return TurnLeft(res)
+End If
+
+IF fn = "TURNR"
+res = EvalLine(expr)
+Return TurnRight(res)
+End If
+
+IF fn = "TURTLEX"
+res = EvalLine(expr)
+Return TurtleXpos(res)
+End If
+
+IF fn = "TURTLEY"
+res = EvalLine(expr)
+Return TurtleYpos(res)
+End If
+'----------------------
+IF fn = "GTX"
+'res = EvalLine(expr)
+Return turtlex
+End If
+
+IF fn = "GTY"
+'res = EvalLine(expr)
+Return turtley
+End If
+
+
+'-----------------------
+End Function
+
